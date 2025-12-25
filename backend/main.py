@@ -106,7 +106,7 @@ If experiencing:
 Please seek EMERGENCY medical attention immediately.
 
 📍 Suwa Setha Hospital Emergency Department
-📞 Emergency: 1990
+📞 Emergency: 1990 / 0112 691 111
 
 ⚠️ THIS IS NOT A SUBSTITUTE FOR EMERGENCY CARE."""
         return ChatResponse(response=response)
