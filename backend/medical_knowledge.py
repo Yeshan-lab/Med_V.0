@@ -1,6 +1,7 @@
 """
 Advanced Medical Knowledge Base - Rule-Based AI
 Provides validated medical advice for common conditions
+FIXED: Headache now correctly identifies tension headache instead of influenza
 """
 
 class MedicalKnowledgeBase:
@@ -245,34 +246,54 @@ class MedicalKnowledgeBase:
         }
     
     def identify_condition(self, symptoms_text):
-        """Advanced symptom analysis to identify potential conditions"""
+        """FIXED: Advanced symptom analysis with better headache detection"""
         symptoms = symptoms_text.lower()
         matches = []
         
-        # Check each condition
+        # Special handling for headache complaints
+        if "headache" in symptoms:
+            return self._analyze_headache_case(symptoms_text)
+        
+        # General analysis for other symptoms
         for condition_id, info in self.medical_database.items():
             match_score = 0
             symptom_matches = []
             
-            # Check for symptom keywords
+            # Check for symptom keywords with intelligent weighting
             for symptom in info["symptoms"]:
                 if symptom in symptoms:
-                    match_score += 3
+                    # Different weights for different symptoms
+                    if symptom == "headache":
+                        if condition_id == "influenza":
+                            match_score += 1  # Low weight: headache alone ≠ flu
+                        elif condition_id in ["tension_headache", "migraine", "hypertension"]:
+                            match_score += 4  # High weight: primary symptom
+                        else:
+                            match_score += 2  # Medium weight
+                    elif symptom in ["high fever", "body aches", "chills"]:
+                        match_score += 3  # Important flu symptoms
+                    elif symptom in ["severe headache", "throbbing pain", "aura"]:
+                        match_score += 4  # Important migraine symptoms
+                    elif symptom in ["band-like pressure", "tight neck muscles"]:
+                        match_score += 4  # Important tension headache symptoms
+                    else:
+                        match_score += 2  # Regular symptoms
+                    
                     symptom_matches.append(symptom)
             
-            # Check for condition name
+            # Check for condition name mention (high priority)
             if info["name"].lower() in symptoms:
-                match_score += 5
+                match_score += 6
             
             # Check for related keywords
             related_keywords = {
-                "common_cold": ["cold", "sniffles", "stuff nose"],
+                "common_cold": ["cold", "sniffles", "stuffy nose"],
                 "influenza": ["flu", "influenza", "body ache"],
                 "bronchitis": ["bronchitis", "chest cough"],
                 "gastroenteritis": ["stomach flu", "food poisoning", "vomiting"],
                 "acid_reflux": ["gerd", "heartburn", "indigestion"],
-                "migraine": ["migraine", "aura", "sensitivity light"],
-                "tension_headache": ["tension headache", "stress headache"],
+                "migraine": ["migraine", "aura", "sensitivity light", "throbbing"],
+                "tension_headache": ["tension headache", "stress headache", "pressure head"],
                 "back_pain": ["backache", "lower back", "spinal"],
                 "arthritis": ["joint pain", "arthritic"],
                 "eczema": ["dermatitis", "skin rash", "itchy skin"],
@@ -287,7 +308,8 @@ class MedicalKnowledgeBase:
                     if keyword in symptoms:
                         match_score += 2
             
-            if match_score > 0:
+            # Only include meaningful matches
+            if match_score >= 3:
                 matches.append({
                     "condition_id": condition_id,
                     "name": info["name"],
@@ -298,7 +320,91 @@ class MedicalKnowledgeBase:
         
         # Sort by match score
         matches.sort(key=lambda x: x["match_score"], reverse=True)
-        return matches[:3]  # Return top 3 matches
+        
+        # If no good matches, return general advice
+        if not matches or matches[0]["match_score"] < 4:
+            return []
+        
+        return matches[:3]
+    
+    def _analyze_headache_case(self, symptoms_text):
+        """Specialized logic for headache complaints"""
+        symptoms = symptoms_text.lower()
+        matches = []
+        
+        # Check what type of headache it might be
+        headache_type = "tension_headache"  # Default: most common
+        
+        # Migraine indicators
+        migraine_indicators = [
+            ("throbbing", 3), ("pulsating", 3), ("one side", 3), 
+            ("light sensitivity", 3), ("sound sensitivity", 3), 
+            ("aura", 4), ("visual disturbance", 3), ("nausea", 2), ("vomiting", 2)
+        ]
+        
+        # Tension headache indicators
+        tension_indicators = [
+            ("pressure", 3), ("tight", 3), ("band", 3), ("stress", 2), 
+            ("tension", 3), ("both sides", 2), ("mild to moderate", 2)
+        ]
+        
+        # Calculate scores
+        migraine_score = sum(score for indicator, score in migraine_indicators if indicator in symptoms)
+        tension_score = sum(score for indicator, score in tension_indicators if indicator in symptoms)
+        
+        # Also check for other conditions that include headache
+        other_conditions = []
+        
+        # Check for flu (needs additional symptoms)
+        flu_indicators = ["fever", "body aches", "chills", "fatigue", "cough"]
+        flu_count = sum(1 for indicator in flu_indicators if indicator in symptoms)
+        
+        # Check for sinus issues
+        sinus_indicators = ["sinus", "facial pressure", "congestion", "runny nose"]
+        sinus_count = sum(1 for indicator in sinus_indicators if indicator in symptoms)
+        
+        # Determine primary headache type
+        if migraine_score >= 4:
+            matches.append({
+                "condition_id": "migraine",
+                "name": "Migraine Headache",
+                "match_score": 5 + migraine_score,
+                "matched_symptoms": ["headache"] + [ind for ind, _ in migraine_indicators if ind in symptoms],
+                "severity": "moderate_severe"
+            })
+        
+        # Always include tension headache (most common)
+        matches.append({
+            "condition_id": "tension_headache",
+            "name": "Tension Headache",
+            "match_score": 5 + tension_score,
+            "matched_symptoms": ["headache"] + [ind for ind, _ in tension_indicators if ind in symptoms],
+            "severity": "mild_moderate"
+        })
+        
+        # Include flu only if there are other flu symptoms
+        if flu_count >= 2:
+            matches.append({
+                "condition_id": "influenza",
+                "name": "Influenza (Flu)",
+                "match_score": 3 + flu_count,
+                "matched_symptoms": ["headache"] + [ind for ind in flu_indicators if ind in symptoms],
+                "severity": "moderate"
+            })
+        
+        # Include hypertension if mentioned
+        if any(word in symptoms for word in ["high blood pressure", "hypertension", "bp"]):
+            matches.append({
+                "condition_id": "hypertension",
+                "name": "High Blood Pressure",
+                "match_score": 4,
+                "matched_symptoms": ["headache"],
+                "severity": "moderate_severe"
+            })
+        
+        # Sort by match score
+        matches.sort(key=lambda x: x["match_score"], reverse=True)
+        return matches[:3]
     
     def generate_advice(self, condition_id, symptoms_text=""):
         """Generate comprehensive medical advice for a condition"""
