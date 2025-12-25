@@ -1,104 +1,111 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-import torch
+"""
+Advanced Medical AI using Rule-Based Knowledge
+Replaces unreliable small language models
+"""
 
-class MedicalModel:
+from medical_knowledge import medical_kb
+import random
+
+class AdvancedMedicalAI:
     def __init__(self):
-        self.model = None
-        self.tokenizer = None
-        self.generator = None
-        self.model_loaded = False
+        self.knowledge_base = medical_kb
+        self.conversation_history = []
         
-    def load_model(self):
-        """Load a very small medical model"""
-        try:
-            print("🔄 Loading medical model...")
-            
-            # Using a tiny GPT-2 model (82MB)
-            model_name = "distilbert/distilgpt2" 
-            
-            print(f"📥 Downloading model: {model_name}")
-            
-            # Load tokenizer and model
-            self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForCausalLM.from_pretrained(model_name)  # FIXED: Changed to AutoModelForCausalLM
-            
-            # Add padding token if not present
-            if self.tokenizer.pad_token is None:
-                self.tokenizer.pad_token = self.tokenizer.eos_token
-            
-            print("✅ Model and tokenizer loaded!")
-            
-            # Create text generation pipeline
-            self.generator = pipeline(
-                "text-generation",
-                model=self.model,
-                tokenizer=self.tokenizer,
-                device=-1,  # Use CPU
-                max_length=200,
-                temperature=0.7,
-                do_sample=True,
-                pad_token_id=self.tokenizer.eos_token_id
-            )
-            
-            self.model_loaded = True
-            print("✅ Pipeline created successfully!")
-            return True
-            
-        except Exception as e:
-            print(f"❌ Error loading model: {e}")
-            import traceback
-            traceback.print_exc()
-            self.model_loaded = False
-            return False
+    def process_query(self, user_input: str) -> str:
+        """Process medical query with advanced analysis"""
+        
+        # Clean and prepare input
+        user_input = user_input.lower().strip()
+        
+        # Check for emergencies first
+        emergencies = self.knowledge_base.check_emergency(user_input)
+        if emergencies:
+            return self._generate_emergency_response(emergencies)
+        
+        # Identify potential conditions
+        possible_conditions = self.knowledge_base.identify_condition(user_input)
+        
+        # Store in conversation history
+        self.conversation_history.append({
+            "user_input": user_input,
+            "matched_conditions": possible_conditions
+        })
+        
+        # Generate appropriate response
+        if possible_conditions:
+            # Multiple possible conditions
+            if len(possible_conditions) > 1:
+                return self._generate_differential_diagnosis(possible_conditions, user_input)
+            # Single likely condition
+            else:
+                return self.knowledge_base.generate_advice(
+                    possible_conditions[0]["condition_id"],
+                    user_input
+                )
+        else:
+            # No specific condition matched
+            return self.knowledge_base._generate_general_advice(user_input)
     
-    def generate_response(self, prompt: str) -> str:
-        """Generate response using the model"""
-        if not self.model_loaded:
-            if not self.load_model():
-                return None
+    def _generate_emergency_response(self, emergencies):
+        """Generate emergency response"""
+        response = "🚨 **EMERGENCY MEDICAL ALERT** 🚨\n\n"
+        response += f"Based on your description of: {', '.join(emergencies)}\n\n"
         
-        try:
-            # Generate response
-            result = self.generator(
-                prompt,
-                max_length=200,
-                temperature=0.7,
-                top_p=0.9,
-                num_return_sequences=1,
-                pad_token_id=self.tokenizer.eos_token_id,
-                no_repeat_ngram_size=3
-            )
-            
-            if result and len(result) > 0:
-                generated_text = result[0]['generated_text']
-                
-                # Remove the prompt from the response
-                if generated_text.startswith(prompt):
-                    generated_text = generated_text[len(prompt):].strip()
-                
-                # Clean up any extra text
-                generated_text = generated_text.strip()
-                
-                print(f"🤖 Generated response: {generated_text[:100]}...")
-                return generated_text
-                
-        except Exception as e:
-            print(f"❌ Generation error: {e}")
-            import traceback
-            traceback.print_exc()
-            
-        return None
+        response += "**IMMEDIATE ACTION REQUIRED:**\n"
+        response += "• Call emergency services (1990 in Sri Lanka) or go to nearest hospital\n"
+        response += "• Do not wait for symptoms to improve\n"
+        response += "• Do not drive yourself if experiencing these symptoms\n\n"
+        
+        response += "**Emergency Symptoms Detected:**\n"
+        for emergency in emergencies:
+            response += f"• {emergency.title()}\n"
+        
+        response += "\n**Suwa Setha Hospital Emergency Department**\n"
+        response += "📍 Location: [Hospital Address]\n"
+        response += "📞 Emergency: 1990 or [Hospital Emergency Number]\n"
+        response += "⏰ 24/7 Emergency Services Available\n\n"
+        
+        response += "⚠️ THIS IS NOT A SUBSTITUTE FOR EMERGENCY MEDICAL CARE."
+        return response
+    
+    def _generate_differential_diagnosis(self, conditions, symptoms):
+        """Generate response when multiple conditions are possible"""
+        response = "🏥 **Suwa Setha Hospital - Symptom Analysis**\n\n"
+        response += f"Based on your symptoms: *{symptoms[:100]}...*\n\n"
+        response += "**Possible Conditions to Consider:**\n\n"
+        
+        for i, condition in enumerate(conditions[:3], 1):
+            response += f"{i}. **{condition['name']}**\n"
+            response += f"   Match Confidence: {'★' * min(5, condition['match_score'])}\n"
+            if condition['matched_symptoms']:
+                response += f"   Matching Symptoms: {', '.join(condition['matched_symptoms'])}\n"
+            response += "\n"
+        
+        response += "**Recommendations:**\n"
+        response += "1. The condition with highest match is most likely\n"
+        response += "2. Each condition has different management approaches\n"
+        response += "3. Professional evaluation is needed for accurate diagnosis\n\n"
+        
+        # Offer detailed info on top match
+        top_condition = conditions[0]
+        response += f"**Detailed Information for {top_condition['name']}:**\n"
+        detailed_advice = self.knowledge_base.generate_advice(
+            top_condition["condition_id"],
+            symptoms
+        )
+        
+        # Extract just the advice part
+        if "Self-Care Recommendations:" in detailed_advice:
+            advice_start = detailed_advice.find("Self-Care Recommendations:")
+            response += detailed_advice[advice_start:advice_start+500] + "...\n\n"
+        
+        response += "**Next Steps:**\n"
+        response += "• Monitor symptoms closely\n"
+        response += "• Follow general self-care recommendations\n"
+        response += "• Schedule appointment at Suwa Setha Hospital for proper diagnosis\n\n"
+        
+        response += self.knowledge_base.safety_disclaimer
+        return response
 
 # Create global instance
-medical_ai = MedicalModel()
-
-# Simple test function
-def test_model():
-    """Test if model works"""
-    prompt = "Patient: headache\nDoctor advice:"
-    response = medical_ai.generate_response(prompt)
-    if response:
-        print(f"✅ Test successful: {response[:50]}...")
-    else:
-        print("❌ Test failed")
-    return response
+medical_ai = AdvancedMedicalAI()
