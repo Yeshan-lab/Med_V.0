@@ -1,4 +1,4 @@
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
 import torch
 
 class MedicalModel:
@@ -13,29 +13,24 @@ class MedicalModel:
         try:
             print("🔄 Loading medical model...")
             
-            # Using a DIFFERENT tiny model that doesn't need protobuf
-            # Let's try a different approach - use a text-generation model instead
-            
-            # OPTIONS (all under 100MB):
-            # 1. "sshleifer/tiny-gpt2" (82MB) - Simple text generation
-            # 2. "distilgpt2" (334MB) - A bit larger but good quality
-            # 3. "microsoft/DialoGPT-small" (334MB) - Chat optimized
-            
-            # Let's use the smallest possible
-            model_name = "sshleifer/tiny-gpt2"  # Only 82MB and doesn't need protobuf
+            # Using a tiny GPT-2 model (82MB)
+            model_name = "sshleifer/tiny-gpt2"  # Only 82MB
             
             print(f"📥 Downloading model: {model_name}")
             
+            # Load tokenizer and model
             self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-            self.model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
+            self.model = AutoModelForCausalLM.from_pretrained(model_name)  # FIXED: Changed to AutoModelForCausalLM
             
             # Add padding token if not present
             if self.tokenizer.pad_token is None:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
             
-            # Create pipeline
+            print("✅ Model and tokenizer loaded!")
+            
+            # Create text generation pipeline
             self.generator = pipeline(
-                "text-generation",  # Changed from text2text-generation
+                "text-generation",
                 model=self.model,
                 tokenizer=self.tokenizer,
                 device=-1,  # Use CPU
@@ -46,7 +41,7 @@ class MedicalModel:
             )
             
             self.model_loaded = True
-            print("✅ Model loaded successfully!")
+            print("✅ Pipeline created successfully!")
             return True
             
         except Exception as e:
@@ -63,20 +58,28 @@ class MedicalModel:
                 return None
         
         try:
+            # Generate response
             result = self.generator(
                 prompt,
                 max_length=200,
                 temperature=0.7,
                 top_p=0.9,
                 num_return_sequences=1,
-                pad_token_id=self.tokenizer.eos_token_id
+                pad_token_id=self.tokenizer.eos_token_id,
+                no_repeat_ngram_size=3
             )
             
             if result and len(result) > 0:
                 generated_text = result[0]['generated_text']
+                
                 # Remove the prompt from the response
                 if generated_text.startswith(prompt):
                     generated_text = generated_text[len(prompt):].strip()
+                
+                # Clean up any extra text
+                generated_text = generated_text.strip()
+                
+                print(f"🤖 Generated response: {generated_text[:100]}...")
                 return generated_text
                 
         except Exception as e:
@@ -94,4 +97,8 @@ def test_model():
     """Test if model works"""
     prompt = "Patient: headache\nDoctor advice:"
     response = medical_ai.generate_response(prompt)
+    if response:
+        print(f"✅ Test successful: {response[:50]}...")
+    else:
+        print("❌ Test failed")
     return response
