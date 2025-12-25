@@ -14,7 +14,7 @@ class MedicalModel:
             print("🔄 Loading medical model...")
             
             # Using a tiny GPT-2 model (82MB)
-            model_name = "sshleifer/tiny-gpt2"  # Only 82MB
+            model_name = "distilbert/distilgpt2" 
             
             print(f"📥 Downloading model: {model_name}")
             
