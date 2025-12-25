@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suwa Setha Hospital - AI Symptom Checker</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="hospital-info">
+                <div class="hospital-icon">
+                    <i class="fas fa-hospital"></i>
+                </div>
+                <div>
+                    <h1>Suwa Setha Hospital</h1>
+                    <h2>AI Symptom Checker Chatbot</h2>
+                    <p class="subtitle">Emerging Technologies in Healthcare - Academic Project</p>
+                </div>
+            </div>
+            <div class="project-info">
+                <p>This is an educational demonstration of AI in healthcare</p>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="disclaimer-box">
+                <div class="disclaimer-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="disclaimer-text">
+                    <h3><i class="fas fa-shield-alt"></i> Important Safety Information</h3>
+                    <p>This AI chatbot provides general health information only and is <strong>NOT a substitute for professional medical advice, diagnosis, or treatment</strong>. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.</p>
+                    <p class="emergency-note"><i class="fas fa-ambulance"></i> <strong>In case of emergency:</strong> Call your local emergency number or visit the nearest hospital immediately.</p>
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-header">
+                    <h3><i class="fas fa-robot"></i> AI Healthcare Assistant</h3>
+                    <div class="chat-status" id="chatStatus">
+                        <i class="fas fa-circle online"></i> Ready to assist
+                    </div>
+                </div>
+                
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Messages will appear here -->
+                    <div class="message ai-message">
+                        <div class="message-header">
+                            <i class="fas fa-robot"></i>
+                            <span>AI Assistant</span>
+                        </div>
+                        <div class="message-content">
+                            Hello! I'm an AI assistant for Suwa Setha Hospital. I can provide general health information based on symptoms you describe. Please tell me about your symptoms in your own words (e.g., "I have fever and cough for 3 days").
+                        </div>
+                        <div class="message-timestamp">Just now</div>
+                    </div>
+                </div>
+                
+                <div class="chat-input-area">
+                    <div class="input-wrapper">
+                        <textarea 
+                            id="userInput" 
+                            placeholder="Describe your symptoms here (e.g., I have headache and nausea since morning)..."
+                            rows="2"
+                        ></textarea>
+                        <button id="sendButton" class="send-button">
+                            <i class="fas fa-paper-plane"></i> Send
+                        </button>
+                    </div>
+                    <div class="input-hint">
+                        <i class="fas fa-lightbulb"></i> Try examples: "fever and sore throat", "stomach pain after eating", "headache with dizziness"
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <div class="info-card">
+                    <div class="info-icon">
+                        <i class="fas fa-user-md"></i>
+                    </div>
+                    <h4>How This Works</h4>
+                    <p>This AI analyzes symptom descriptions using a large language model from Hugging Face. It provides general health information based on medical knowledge patterns.</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <h4>Academic Purpose</h4>
+                    <p>This project demonstrates how emerging AI technologies can support early patient assessment and engagement in healthcare settings.</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <h4>Privacy & Safety</h4>
+                    <p>Your conversation is not stored. All responses include safety disclaimers. No personal data is collected or shared.</p>
+                </div>
+            </div>
+        </main>
+
+        <footer class="footer">
+            <p>© 2024 Suwa Setha Hospital - Emerging Technologies in Healthcare Academic Project</p>
+            <p class="footer-note">This system is for educational purposes only and does not provide medical diagnosis</p>
+        </footer>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal" id="loadingModal">
+        <div class="modal-content">
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+            </div>
+            <h3>AI is analyzing your symptoms</h3>
+            <p>Please wait while our AI processes your information...</p>
+            <div class="loading-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
