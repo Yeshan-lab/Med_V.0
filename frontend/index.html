@@ -3,127 +3,739 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Suwa Setha Hospital - AI Symptom Checker</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Suwa Setha - AI Medical Assistant</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        /* Reset & Base */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f9ff 0%, #e8f4ff 100%);
+            color: #2c3e50;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        /* Container */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 40px rgba(0, 82, 155, 0.12);
+            overflow: hidden;
+            border: 1px solid #e0f0ff;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a5f9e 0%, #2a7cc7 100%);
+            color: white;
+            padding: 35px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23ffffff' fill-opacity='0.05' fill-rule='evenodd'/%3E%3C/svg%3E");
+        }
+        .hospital-title {
+            position: relative;
+            z-index: 1;
+        }
+        .hospital-title h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .hospital-title p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            margin-bottom: 15px;
+        }
+        .project-tag {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        
+        /* Warning Box */
+        .warning-box {
+            background: #fff8e6;
+            border-left: 5px solid #ff9800;
+            margin: 25px;
+            padding: 22px;
+            border-radius: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 18px;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .warning-icon {
+            color: #ff9800;
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+        .warning-content h3 {
+            color: #e65100;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .warning-content p {
+            color: #5d4037;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        .emergency-note {
+            background: rgba(231, 76, 60, 0.1);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 12px;
+            border-left: 3px solid #e74c3c;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: #c0392b;
+        }
+        
+        /* Chat Container */
+        .chat-container {
+            margin: 0 25px 30px;
+        }
+        .chat-header {
+            background: #f8fbff;
+            padding: 18px 25px;
+            border-radius: 15px 15px 0 0;
+            border-bottom: 2px solid #e0f0ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-header h3 {
+            color: #1a5f9e;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .chat-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #2ecc71;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .status-error { background: #e74c3c !important; }
+        
+        /* Messages */
+        .messages-container {
+            background: #f8fbff;
+            height: 420px;
+            overflow-y: auto;
+            padding: 25px;
+            border-radius: 0 0 15px 15px;
+        }
+        .message {
+            margin-bottom: 22px;
+            max-width: 85%;
+            animation: slideIn 0.4s ease;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .user-message {
+            margin-left: auto;
+            animation: slideInUser 0.4s ease;
+        }
+        @keyframes slideInUser {
+            from { opacity: 0; transform: translateX(-20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .message-bubble {
+            padding: 18px 22px;
+            border-radius: 20px;
+            position: relative;
+            word-wrap: break-word;
+        }
+        .ai-bubble {
+            background: white;
+            border: 2px solid #e0f0ff;
+            border-bottom-left-radius: 5px;
+            box-shadow: 0 4px 12px rgba(0, 82, 155, 0.08);
+        }
+        .user-bubble {
+            background: linear-gradient(135deg, #1a5f9e 0%, #2a7cc7 100%);
+            color: white;
+            border-bottom-right-radius: 5px;
+            box-shadow: 0 4px 12px rgba(26, 95, 158, 0.2);
+        }
+        .message-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .ai-bubble .message-header { color: #1a5f9e; }
+        .user-bubble .message-header { color: rgba(255,255,255,0.95); }
+        .message-timestamp {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 8px;
+            text-align: right;
+        }
+        
+        /* Input Area */
+        .input-area {
+            margin: 25px;
+            position: relative;
+        }
+        .input-wrapper {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        textarea {
+            flex: 1;
+            padding: 20px;
+            border: 2px solid #dbe9ff;
+            border-radius: 15px;
+            font-size: 1rem;
+            font-family: inherit;
+            resize: none;
+            min-height: 70px;
+            max-height: 150px;
+            background: white;
+            transition: all 0.3s;
+            line-height: 1.5;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #2a7cc7;
+            box-shadow: 0 0 0 4px rgba(42, 124, 199, 0.1);
+        }
+        textarea::placeholder {
+            color: #95a5a6;
+        }
+        .send-button {
+            background: linear-gradient(135deg, #1a5f9e 0%, #2a7cc7 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            width: 70px;
+            cursor: pointer;
+            font-size: 1.3rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .send-button:hover {
+            background: linear-gradient(135deg, #15487d 0%, #1f6ab0 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(26, 95, 158, 0.25);
+        }
+        .send-button:active { transform: translateY(0); }
+        .send-button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        /* Examples */
+        .examples-section {
+            margin: 0 25px 25px;
+        }
+        .examples-title {
+            color: #1a5f9e;
+            margin-bottom: 15px;
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .examples-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .example-btn {
+            background: #e8f4ff;
+            border: 2px solid #d1e7ff;
+            color: #1a5f9e;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        .example-btn:hover {
+            background: #d1e7ff;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 82, 155, 0.15);
+        }
+        
+        /* Footer */
+        .footer {
+            background: #f8fbff;
+            padding: 25px;
+            text-align: center;
+            border-top: 2px solid #e0f0ff;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        .footer strong {
+            color: #1a5f9e;
+        }
+        .footer-note {
+            color: #e74c3c;
+            font-weight: 600;
+            margin-top: 12px;
+            font-size: 0.85rem;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { border-radius: 15px; }
+            .header { padding: 25px; }
+            .hospital-title h1 { font-size: 2rem; flex-direction: column; align-items: flex-start; gap: 10px; }
+            .warning-box, .chat-container, .input-area, .examples-section { margin: 15px; }
+            .messages-container { height: 350px; padding: 15px; }
+            .message { max-width: 95%; }
+            .input-wrapper { flex-direction: column; }
+            .send-button { width: 100%; height: 60px; }
+            .examples-grid { flex-direction: column; }
+        }
+        
+        /* Custom scrollbar */
+        .messages-container::-webkit-scrollbar { width: 8px; }
+        .messages-container::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .messages-container::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
+        .messages-container::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        /* Loading indicator (FIXED - will disappear properly) */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 20px;
+            background: white;
+            border: 2px solid #e0f0ff;
+            border-radius: 20px;
+            width: fit-content;
+            margin-bottom: 22px;
+        }
+        .typing-indicator span {
+            width: 10px;
+            height: 10px;
+            background: #2a7cc7;
+            border-radius: 50%;
+            display: inline-block;
+            animation: typingBounce 1.4s infinite ease-in-out both;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typingBounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <header class="header">
-            <div class="hospital-info">
-                <div class="hospital-icon">
-                    <i class="fas fa-hospital"></i>
-                </div>
-                <div>
-                    <h1>Suwa Setha Hospital</h1>
-                    <h2>AI Symptom Checker Chatbot</h2>
-                    <p class="subtitle">Emerging Technologies in Healthcare - Academic Project</p>
-                </div>
-            </div>
-            <div class="project-info">
-                <p>This is an educational demonstration of AI in healthcare</p>
-            </div>
-        </header>
-
-        <main class="main-content">
-            <div class="disclaimer-box">
-                <div class="disclaimer-icon">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
-                <div class="disclaimer-text">
-                    <h3><i class="fas fa-shield-alt"></i> Important Safety Information</h3>
-                    <p>This AI chatbot provides general health information only and is <strong>NOT a substitute for professional medical advice, diagnosis, or treatment</strong>. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.</p>
-                    <p class="emergency-note"><i class="fas fa-ambulance"></i> <strong>In case of emergency:</strong> Call your local emergency number or visit the nearest hospital immediately.</p>
+        <!-- Header -->
+        <div class="header">
+            <div class="hospital-title">
+                <h1>
+                    <i class="fas fa-hospital-alt"></i>
+                    Suwa Setha Hospital AI Assistant
+                </h1>
+                <p>Advanced Rule-Based Medical Intelligence for Symptom Analysis</p>
+                <div class="project-tag">
+                    <i class="fas fa-graduation-cap"></i> Emerging Technologies Project
                 </div>
             </div>
-
-            <div class="chat-container">
-                <div class="chat-header">
-                    <h3><i class="fas fa-robot"></i> AI Healthcare Assistant</h3>
-                    <div class="chat-status" id="chatStatus">
-                        <i class="fas fa-circle online"></i> Ready to assist
-                    </div>
+        </div>
+        
+        <!-- Warning Box -->
+        <div class="warning-box">
+            <div class="warning-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="warning-content">
+                <h3><i class="fas fa-shield-alt"></i> Important Medical Disclaimer</h3>
+                <p>This AI assistant provides general health information only and is <strong>NOT a substitute for professional medical advice, diagnosis, or treatment</strong>.</p>
+                <div class="emergency-note">
+                    <i class="fas fa-ambulance"></i>
+                    <span><strong>Emergency:</strong> Call 1990 or visit nearest hospital for chest pain, difficulty breathing, severe pain, or loss of consciousness.</span>
                 </div>
-                
-                <div class="chat-messages" id="chatMessages">
-                    <!-- Messages will appear here -->
-                    <div class="message ai-message">
+            </div>
+        </div>
+        
+        <!-- Chat Container -->
+        <div class="chat-container">
+            <div class="chat-header">
+                <h3><i class="fas fa-robot"></i> Medical AI Assistant</h3>
+                <div class="chat-status">
+                    <div class="status-indicator" id="statusIndicator"></div>
+                    <span id="statusText">System Ready</span>
+                </div>
+            </div>
+            
+            <div class="messages-container" id="messagesContainer">
+                <!-- Initial AI Message -->
+                <div class="message">
+                    <div class="message-bubble ai-bubble">
                         <div class="message-header">
                             <i class="fas fa-robot"></i>
-                            <span>AI Assistant</span>
+                            <span>AI Medical Assistant</span>
                         </div>
-                        <div class="message-content">
-                            Hello! I'm an AI assistant for Suwa Setha Hospital. I can provide general health information based on symptoms you describe. Please tell me about your symptoms in your own words (e.g., "I have fever and cough for 3 days").
-                        </div>
+                        Hello! I'm an AI assistant powered by Suwa Setha Hospital's medical knowledge base. I can provide information about common symptoms like fever, cough, headache, digestive issues, allergies, and more. Please describe what you're experiencing in your own words.
                         <div class="message-timestamp">Just now</div>
                     </div>
                 </div>
-                
-                <div class="chat-input-area">
-                    <div class="input-wrapper">
-                        <textarea 
-                            id="userInput" 
-                            placeholder="Describe your symptoms here (e.g., I have headache and nausea since morning)..."
-                            rows="2"
-                        ></textarea>
-                        <button id="sendButton" class="send-button">
-                            <i class="fas fa-paper-plane"></i> Send
-                        </button>
-                    </div>
-                    <div class="input-hint">
-                        <i class="fas fa-lightbulb"></i> Try examples: "fever and sore throat", "stomach pain after eating", "headache with dizziness"
-                    </div>
+            </div>
+        </div>
+        
+        <!-- Input Area -->
+        <div class="input-area">
+            <div class="input-wrapper">
+                <textarea 
+                    id="userInput" 
+                    placeholder="Describe your symptoms here (e.g., 'I have had headache and fever since yesterday morning')..."
+                    rows="3"
+                ></textarea>
+                <button class="send-button" id="sendButton">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+            
+            <div class="examples-section">
+                <div class="examples-title">
+                    <i class="fas fa-lightbulb"></i> Try these examples:
+                </div>
+                <div class="examples-grid">
+                    <div class="example-btn" onclick="useExample('Headache with dizziness and nausea')">Headache + Dizziness</div>
+                    <div class="example-btn" onclick="useExample('Fever with sore throat and runny nose')">Fever + Sore Throat</div>
+                    <div class="example-btn" onclick="useExample('Stomach pain and diarrhea after meals')">Stomach Pain</div>
+                    <div class="example-btn" onclick="useExample('Chest discomfort when breathing deeply')">Chest Discomfort</div>
+                    <div class="example-btn" onclick="useExample('Back pain that worsens with movement')">Back Pain</div>
                 </div>
             </div>
-
-            <div class="info-section">
-                <div class="info-card">
-                    <div class="info-icon">
-                        <i class="fas fa-user-md"></i>
-                    </div>
-                    <h4>How This Works</h4>
-                    <p>This AI analyzes symptom descriptions using a large language model from Hugging Face. It provides general health information based on medical knowledge patterns.</p>
-                </div>
-                <div class="info-card">
-                    <div class="info-icon">
-                        <i class="fas fa-graduation-cap"></i>
-                    </div>
-                    <h4>Academic Purpose</h4>
-                    <p>This project demonstrates how emerging AI technologies can support early patient assessment and engagement in healthcare settings.</p>
-                </div>
-                <div class="info-card">
-                    <div class="info-icon">
-                        <i class="fas fa-lock"></i>
-                    </div>
-                    <h4>Privacy & Safety</h4>
-                    <p>Your conversation is not stored. All responses include safety disclaimers. No personal data is collected or shared.</p>
-                </div>
-            </div>
-        </main>
-
-        <footer class="footer">
-            <p>© 2025 Suwa Setha Hospital - Emerging Technologies in Healthcare Academic Project</p>
-            <p class="footer-note">This system is for educational purposes only and does not provide medical diagnosis</p>
-        </footer>
-    </div>
-
-    <!-- Loading Modal -->
-    <div class="modal" id="loadingModal">
-        <div class="modal-content">
-            <div class="loading-spinner">
-                <i class="fas fa-spinner fa-spin"></i>
-            </div>
-            <h3>AI is analyzing your symptoms</h3>
-            <p>Please wait while our AI processes your information...</p>
-            <div class="loading-dots">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
+        </div>
+        
+        <!-- Footer -->
+        <div class="footer">
+            <p><strong>Suwa Setha Hospital</strong> – Academic Project: Emerging Technologies in Healthcare</p>
+            <p>This AI system covers 15+ medical conditions with validated health information</p>
+            <p class="footer-note">⚠️ This tool is for educational purposes only. Always consult healthcare professionals for medical concerns.</p>
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script>
+        // Configuration
+        const BACKEND_URL = "https://suwa-setha-backend.onrender.com"; // Your Render backend
+        
+        // DOM Elements
+        const messagesContainer = document.getElementById('messagesContainer');
+        const userInput = document.getElementById('userInput');
+        const sendButton = document.getElementById('sendButton');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const statusText = document.getElementById('statusText');
+        
+        // Initialize
+        userInput.focus();
+        
+        // Event Listeners
+        sendButton.addEventListener('click', sendMessage);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Auto-resize textarea
+        userInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 150) + 'px';
+        });
+        
+        // Example button handler
+        function useExample(text) {
+            userInput.value = text;
+            userInput.style.height = 'auto';
+            userInput.style.height = Math.min(userInput.scrollHeight, 150) + 'px';
+            userInput.focus();
+        }
+        
+        // Send message function
+        async function sendMessage() {
+            const message = userInput.value.trim();
+            
+            // Validate input
+            if (!message) {
+                alert("Please describe your symptoms");
+                userInput.focus();
+                return;
+            }
+            
+            if (message.length > 500) {
+                alert("Please keep your description under 500 characters");
+                userInput.value = message.substring(0, 500);
+                return;
+            }
+            
+            // Check for emergency keywords
+            if (checkEmergency(message)) {
+                if (!confirm("Your symptoms may indicate a serious condition. This AI cannot provide emergency care. Click OK to continue or Cancel to seek immediate medical help.")) {
+                    return;
+                }
+            }
+            
+            // Disable UI and show loading state
+            sendButton.disabled = true;
+            userInput.disabled = true;
+            sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            updateStatus('ai_thinking');
+            
+            // Add user message to chat
+            addMessage(message, 'user');
+            
+            // Clear and reset input
+            userInput.value = '';
+            userInput.style.height = 'auto';
+            
+            // Show typing indicator (FIXED: We'll remove this properly later)
+            const typingIndicator = addTypingIndicator();
+            
+            try {
+                // Call backend API
+                const response = await fetch(`${BACKEND_URL}/chat`, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Remove typing indicator (FIXED: This ensures it disappears)
+                typingIndicator.remove();
+                
+                // Add AI response
+                addMessage(data.response, 'ai');
+                
+                // Update status
+                updateStatus('online');
+                
+            } catch (error) {
+                console.error('API Error:', error);
+                
+                // Remove typing indicator
+                typingIndicator.remove();
+                
+                // Show error message
+                const errorMessage = `I'm experiencing connection issues with the AI service. Here's general advice:\n\n• Monitor your symptoms closely\n• Stay hydrated and get adequate rest\n• Avoid self-medication without professional advice\n• Contact Suwa Setha Hospital directly for proper medical evaluation\n\n(Error: ${error.message})`;
+                addMessage(errorMessage, 'ai');
+                
+                // Update status to error
+                updateStatus('error');
+                
+            } finally {
+                // Re-enable UI
+                sendButton.disabled = false;
+                userInput.disabled = false;
+                sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+                userInput.focus();
+                
+                // Scroll to bottom
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+        
+        // Add message to chat
+        function addMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender === 'user' ? 'user-message' : ''}`;
+            
+            const timestamp = new Date().toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            
+            let headerIcon, headerText;
+            if (sender === 'user') {
+                headerIcon = '<i class="fas fa-user"></i>';
+                headerText = 'You';
+            } else {
+                headerIcon = '<i class="fas fa-robot"></i>';
+                headerText = 'AI Medical Assistant';
+            }
+            
+            // Format the text with HTML
+            const formattedText = formatMedicalText(text);
+            
+            messageDiv.innerHTML = `
+                <div class="message-bubble ${sender === 'user' ? 'user-bubble' : 'ai-bubble'}">
+                    <div class="message-header">
+                        ${headerIcon}
+                        <span>${headerText}</span>
+                    </div>
+                    ${formattedText}
+                    <div class="message-timestamp">${timestamp}</div>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            return messageDiv;
+        }
+        
+        // Add typing indicator (returns element for easy removal)
+        function addTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'message';
+            typingDiv.id = 'typingIndicator';
+            typingDiv.innerHTML = `
+                <div class="typing-indicator">
+                    <span></span><span></span><span></span>
+                    <span style="margin-left: 10px; font-size: 0.9rem; color: #666;">AI is analyzing your symptoms...</span>
+                </div>
+            `;
+            
+            messagesContainer.appendChild(typingDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            return typingDiv;
+        }
+        
+        // Format medical text with proper HTML
+        function formatMedicalText(text) {
+            // Escape HTML first
+            let formatted = escapeHtml(text);
+            
+            // Convert markdown-like formatting
+            formatted = formatted
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // Bold
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')              // Italic
+                .replace(/•(.*?)(?=\n|$)/g, '<br>• $1')            // Bullet points
+                .replace(/(\d+\.\s.*?)(?=\n|$)/g, '<br>$1')        // Numbered lists
+                .replace(/\n\n/g, '</p><p>')                       // Paragraphs
+                .replace(/\n/g, '<br>')                            // Line breaks
+                .replace(/^(.+)$/m, '<p>$1</p>')                   // Wrap in paragraph
+                .replace(/🚨/g, '<i class="fas fa-exclamation-circle" style="color:#e74c3c"></i>')
+                .replace(/🏥/g, '<i class="fas fa-hospital" style="color:#1a5f9e"></i>')
+                .replace(/⚠️/g, '<i class="fas fa-exclamation-triangle" style="color:#ff9800"></i>')
+                .replace(/✅/g, '<i class="fas fa-check-circle" style="color:#27ae60"></i>')
+                .replace(/🤖/g, '<i class="fas fa-robot" style="color:#2a7cc7"></i>');
+            
+            return formatted;
+        }
+        
+        // Escape HTML for security
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Update status indicator
+        function updateStatus(state) {
+            switch(state) {
+                case 'online':
+                    statusIndicator.className = 'status-indicator';
+                    statusIndicator.style.background = '#2ecc71';
+                    statusText.textContent = 'System Ready';
+                    break;
+                case 'ai_thinking':
+                    statusIndicator.className = 'status-indicator';
+                    statusIndicator.style.background = '#3498db';
+                    statusText.textContent = 'AI Processing...';
+                    break;
+                case 'error':
+                    statusIndicator.className = 'status-indicator status-error';
+                    statusIndicator.style.background = '#e74c3c';
+                    statusText.textContent = 'Connection Issue';
+                    break;
+            }
+        }
+        
+        // Check for emergency symptoms
+        function checkEmergency(text) {
+            const emergencies = [
+                'chest pain', 'pressure chest', 'tight chest',
+                'can\'t breathe', 'difficulty breathing', 'shortness of breath',
+                'severe pain', 'unbearable pain', 'worst pain',
+                'unconscious', 'passed out', 'fainted',
+                'severe headache', 'sudden headache',
+                'heavy bleeding', 'bleeding won\'t stop',
+                'poison', 'overdose', 'ingested chemical'
+            ];
+            
+            const lowerText = text.toLowerCase();
+            return emergencies.some(emergency => lowerText.includes(emergency));
+        }
+        
+        // Emergency detection for textarea
+        userInput.addEventListener('input', function() {
+            if (checkEmergency(this.value)) {
+                this.style.borderColor = '#e74c3c';
+                this.style.boxShadow = '0 0 0 4px rgba(231, 76, 60, 0.1)';
+            } else {
+                this.style.borderColor = '#dbe9ff';
+                this.style.boxShadow = 'none';
+            }
+        });
+        
+        // Console safety notice
+        console.log('%c⚠️ IMPORTANT MEDICAL DISCLAIMER ⚠️', 'color: #e74c3c; font-size: 14px; font-weight: bold;');
+        console.log('%cThis is an academic project for educational purposes only.', 'color: #666;');
+        console.log('%cThis AI does not provide medical diagnosis or treatment.', 'color: #666;');
+        console.log('%cIn case of medical emergency, call 1990 or visit a hospital.', 'color: #c0392b; font-weight: bold;');
+    </script>
 </body>
 </html>
