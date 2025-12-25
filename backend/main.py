@@ -24,7 +24,7 @@ app.add_middleware(
 HUGGINGFACE_API_KEY = "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"
 MODEL_NAME = "distilgpt2e"
 # Use the new router endpoint
-API_URL = "https://router.huggingface.co"
+API_URL = "https://api-inference.huggingface.co"
 
 class ChatRequest(BaseModel):
     message: str
