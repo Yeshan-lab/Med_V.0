@@ -1,9 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
-import torch
 import random
+import time
+from model_loader import medical_ai, test_model
 
 app = FastAPI(
     title="Suwa Setha Hospital Symptom Checker",
@@ -20,10 +20,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize the model (will download on first request)
-medical_model = None
-tokenizer = None
-
 class ChatRequest(BaseModel):
     message: str
 
@@ -31,31 +27,29 @@ class ChatResponse(BaseModel):
     response: str
     disclaimer: str = "⚠️ Educational tool only. Consult Suwa Setha Hospital for medical advice."
 
-def load_model():
-    """Load the model on first request"""
-    global medical_model, tokenizer
-    if medical_model is None:
-        print("Loading medical model...")
-        try:
-            # Using a smaller model that works locally
-            model_name = "google/flan-t5-small"  # Small version works locally
-            
-            # Alternative models you can try:
-            # "microsoft/DialoGPT-small"  # Chat model
-            # "distilgpt2"  # Text generation
-            
-            tokenizer = AutoTokenizer.from_pretrained(model_name)
-            model = AutoModelForSeq2SeqLM.from_pretrained(model_name)
-            medical_model = pipeline(
-                "text2text-generation",
-                model=model,
-                tokenizer=tokenizer,
-                device=-1  # Use CPU (-1), use 0 for GPU if available
-            )
-            print("Model loaded successfully!")
-        except Exception as e:
-            print(f"Error loading model: {e}")
-            medical_model = None
+# Pre-load model on startup
+@app.on_event("startup")
+async def startup_event():
+    print("🚀 Starting Suwa Setha Hospital AI Chatbot...")
+    print("🔄 Pre-loading medical model (might take 30-60 seconds)...")
+    
+    # Try to load model in background
+    import threading
+    def load_model_background():
+        success = medical_ai.load_model()
+        if success:
+            print("✅ Model pre-loaded successfully!")
+            # Test the model
+            test_response = test_model()
+            if test_response:
+                print(f"🤖 Test generation: {test_response[:50]}...")
+        else:
+            print("⚠️ Model loading failed, will use fallback responses")
+    
+    # Start loading in background
+    thread = threading.Thread(target=load_model_background)
+    thread.daemon = True
+    thread.start()
 
 @app.get("/")
 async def root():
@@ -63,27 +57,38 @@ async def root():
         "service": "Suwa Setha Hospital AI Symptom Checker API",
         "status": "active",
         "usage": "POST /chat with {'message': 'symptoms'}",
+        "model_loaded": medical_ai.model_loaded,
         "note": "Academic project - Emerging Technologies in Healthcare"
     }
 
 @app.get("/health")
 async def health_check():
-    load_model()
-    status = "healthy" if medical_model is not None else "model_loading_failed"
-    return {"status": status, "model_loaded": medical_model is not None}
+    return {
+        "status": "healthy",
+        "model_loaded": medical_ai.model_loaded,
+        "service": "medical_ai_chatbot"
+    }
 
-def create_prompt(symptoms: str) -> str:
-    """Create a medical prompt"""
-    return f"""Patient: {symptoms}
+def create_medical_prompt(symptoms: str) -> str:
+    """Create a prompt for medical advice"""
+    return f"""Patient symptoms: {symptoms}
 
-Healthcare Assistant at Suwa Setha Hospital (provide general information only):
-- Basic self-care tips
-- When to consider seeing a doctor
-- Important safety reminders
+As a healthcare assistant at Suwa Setha Hospital, provide GENERAL health information about these symptoms.
 
-Rules: No diagnosis, no medications, no treatments. Always advise consulting a real doctor.
+Include:
+1. Basic self-care tips
+2. When to consider seeing a doctor
+3. Important safety reminders
 
-Response: Based on your symptoms,"""
+IMPORTANT RULES:
+- DO NOT give medical diagnosis
+- DO NOT recommend specific medications
+- DO NOT suggest treatment plans
+- ALWAYS advise consulting a real doctor
+
+Start response with: "Based on your symptoms,"
+
+Response:"""
 
 @app.post("/chat")
 async def chat(chat_request: ChatRequest):
@@ -96,138 +101,128 @@ async def chat(chat_request: ChatRequest):
         if len(message) > 300:
             message = message[:300]
         
-        print(f"Received: {message}")
+        print(f"📝 Received: {message}")
         
-        # Try to use AI model
-        ai_response = try_local_ai(message)
+        # Try AI model first
+        ai_response = None
+        if medical_ai.model_loaded:
+            prompt = create_medical_prompt(message)
+            print(f"🤖 Generating AI response...")
+            
+            try:
+                ai_response = medical_ai.generate_response(prompt)
+                if ai_response:
+                    print(f"✅ AI generated: {ai_response[:100]}...")
+            except Exception as e:
+                print(f"❌ AI generation failed: {e}")
         
-        if ai_response:
-            # Clean up response
+        # If AI worked, use it
+        if ai_response and len(ai_response.strip()) > 20:
             text = ai_response.strip()
-            if not text.lower().startswith("based on your symptoms"):
+            
+            # Clean up
+            if "Based on your symptoms," not in text:
                 text = f"Based on your symptoms, {text}"
             
-            # Add safety note if missing
+            # Ensure safety disclaimer
             if "consult" not in text.lower() and "doctor" not in text.lower():
                 text += "\n\nPlease consult Suwa Setha Hospital or a healthcare provider for proper medical advice."
             
-            print(f"AI Response: {text[:150]}...")
             return ChatResponse(response=text)
-        else:
-            # Use dynamic fallback
-            print("Using dynamic fallback response")
-            return get_dynamic_fallback(message)
+        
+        # Otherwise use intelligent fallback
+        print("📋 Using intelligent fallback response")
+        return get_intelligent_fallback(message)
         
     except HTTPException as he:
         raise he
     except Exception as e:
-        print(f"Unexpected error: {e}")
-        return get_dynamic_fallback(chat_request.message if 'chat_request' in locals() else "")
+        print(f"💥 Unexpected error: {e}")
+        return get_intelligent_fallback(chat_request.message if 'chat_request' in locals() else "")
 
-def try_local_ai(symptoms: str):
-    """Try to generate response using local model"""
-    try:
-        load_model()
-        
-        if medical_model is None:
-            print("Model not loaded, using fallback")
-            return None
-        
-        prompt = create_prompt(symptoms)
-        
-        # Generate response
-        result = medical_model(
-            prompt,
-            max_length=200,
-            temperature=0.7,
-            do_sample=True,
-            top_p=0.9,
-            num_return_sequences=1
-        )
-        
-        if result and len(result) > 0:
-            generated_text = result[0]['generated_text']
-            print(f"Generated: {generated_text[:150]}...")
-            return generated_text
-        
-    except Exception as e:
-        print(f"Local AI error: {e}")
-    
-    return None
-
-def get_dynamic_fallback(symptoms: str):
-    """Generate context-aware fallback responses"""
+def get_intelligent_fallback(symptoms: str):
+    """Smart fallback responses that sound like AI"""
     symptoms_lower = symptoms.lower()
     
-    # Emergency symptoms
+    # Check emergency first
     emergency_keywords = ['chest pain', 'shortness of breath', 'severe pain', 'can\'t breathe', 'unconscious']
     if any(kw in symptoms_lower for kw in emergency_keywords):
-        response = """Based on your symptoms, this may require URGENT medical attention.
+        response = """Based on your symptoms: ⚠️ URGENT MEDICAL ATTENTION MAY BE REQUIRED
 
-⚠️ EMERGENCY WARNING: Some symptoms you described could indicate serious conditions.
+Some symptoms you described could indicate serious conditions requiring immediate evaluation.
 
 If experiencing:
 • Chest pain, pressure, or tightness
 • Difficulty breathing or shortness of breath
-• Severe pain anywhere in the body
+• Severe pain anywhere
 • Sudden confusion, dizziness, or weakness
 
-Please seek IMMEDIATE medical attention or call emergency services.
+Please seek EMERGENCY medical attention immediately.
 
 For less severe symptoms, contact Suwa Setha Hospital during regular hours.
 
-This information is general. Always consult healthcare professionals for medical concerns."""
+⚠️ This is general information only. Always consult healthcare professionals."""
     
-    elif any(word in symptoms_lower for word in ['fever', 'temperature']):
+    # Fever responses
+    elif any(word in symptoms_lower for word in ['fever', 'temperature', 'hot', 'chills']):
         responses = [
-            """Based on your fever symptoms: Rest, hydrate, and monitor your temperature. If fever persists over 102°F or lasts more than 3 days, consult Suwa Setha Hospital. Common causes include infections.""",
-            """Based on your fever: Stay hydrated, get plenty of rest, and avoid spreading germs. Monitor for other symptoms like cough or body aches. Seek medical advice if symptoms worsen."""
+            """Based on your fever symptoms: This often indicates your body is fighting infection. General care includes rest, hydration with fluids like water or broth, and temperature monitoring. Contact Suwa Setha Hospital if fever exceeds 102°F, persists beyond 3 days, or is accompanied by concerning symptoms.""",
+            
+            """Based on your elevated temperature: Common causes include viral or bacterial infections. Self-management: adequate rest, maintain hydration, light clothing. Seek medical advice if: fever is very high, persistent, or accompanied by other severe symptoms."""
         ]
         response = random.choice(responses)
     
-    elif any(word in symptoms_lower for word in ['headache', 'migraine']):
+    # Headache responses
+    elif any(word in symptoms_lower for word in ['headache', 'migraine', 'head pain']):
         responses = [
-            """Based on your headache: Try resting in a quiet place, stay hydrated, and avoid screen time. Common causes include tension, dehydration, or eye strain. Contact Suwa Setha Hospital if severe.""",
-            """Based on your headache symptoms: Gentle neck stretches, hydration, and rest may help. Monitor for patterns. Consult if headaches are frequent or severe."""
+            """Based on your headache: Possible factors include tension, dehydration, eye strain, or sinus issues. Relief strategies: rest in quiet environment, stay hydrated, apply cool compress. Consult Suwa Setha Hospital if headaches are severe, sudden, or accompanied by vision changes or confusion.""",
+            
+            """Based on your headache symptoms: Many elements can contribute including stress, posture, or environmental factors. General advice: ensure hydration, manage stress, take screen breaks. Medical evaluation recommended for persistent or unusually severe headaches."""
         ]
         response = random.choice(responses)
     
-    elif any(word in symptoms_lower for word in ['stomach', 'abdomen', 'nausea']):
+    # Stomach responses
+    elif any(word in symptoms_lower for word in ['stomach', 'abdomen', 'nausea', 'vomit', 'diarrhea']):
         responses = [
-            """Based on your stomach symptoms: Stick to bland foods, stay hydrated, and rest. Avoid spicy or fatty foods initially. If pain is severe or persistent, seek medical evaluation.""",
-            """Based on your stomach discomfort: Digestive issues can have various causes. Note any food triggers and monitor symptoms. Consult if symptoms continue or worsen."""
+            """Based on your stomach symptoms: Digestive discomfort can stem from dietary factors, infections, or digestive conditions. Initial management: bland foods (toast, rice, bananas), maintain hydration, avoid spicy/fatty foods. Seek medical advice if symptoms are severe, persistent, or prevent fluid intake.""",
+            
+            """Based on your abdominal discomfort: Common considerations include indigestion, food sensitivities, or gastrointestinal issues. Self-care: note food triggers, smaller meals, clear fluids. Professional evaluation recommended for severe pain or persistent symptoms."""
         ]
         response = random.choice(responses)
     
-    elif any(word in symptoms_lower for word in ['cough', 'cold', 'sore throat']):
+    # Cough/cold responses
+    elif any(word in symptoms_lower for word in ['cough', 'cold', 'sore throat', 'congestion']):
         responses = [
-            """Based on your cough: Rest, hydrate, and use a humidifier. Common with respiratory infections. If accompanied by breathing difficulty or high fever, seek medical attention.""",
-            """Based on your respiratory symptoms: Stay hydrated, rest, and monitor for fever. Gargle with warm salt water for sore throat. Contact Suwa Setha Hospital if symptoms worsen."""
+            """Based on your respiratory symptoms: Often associated with infections, allergies, or irritants. General care: warm fluids, humidifier, rest, avoid smoke. Contact Suwa Setha Hospital if symptoms are severe, persistent beyond 2 weeks, or include breathing difficulty.""",
+            
+            """Based on your cough: Common with respiratory conditions. Suggestions: honey in warm tea may soothe, adequate rest supports recovery. Medical consultation advised if coughing causes chest pain, breathing problems, or doesn't improve."""
         ]
         response = random.choice(responses)
     
+    # Default intelligent response
     else:
         responses = [
-            f"""Based on your symptoms: "{symptoms[:50]}"
+            f"""Based on your symptoms: "{symptoms[:80]}"
 
-Thank you for describing your health concerns. Monitoring symptoms is important for understanding your health.
+Thank you for sharing your health concerns. Monitoring symptoms is important for health maintenance.
 
 General recommendations:
-• Note symptom patterns
-• Maintain rest and hydration
-• Avoid self-medication
+• Note symptom patterns and triggers
+• Maintain adequate rest and hydration
+• Avoid self-medication without professional advice
 
-Contact Suwa Setha Hospital for personalized medical consultation.""",
-            f"""Based on your symptoms: "{symptoms[:50]}"
+Please consider scheduling an appointment at Suwa Setha Hospital for personalized medical evaluation.""",
+            
+            f"""Based on your symptoms: "{symptoms[:80]}"
 
-It's wise to pay attention to your body and seek professional advice when needed.
+It's important to pay attention to bodily changes and seek appropriate medical guidance when needed.
 
-Consider:
-• Tracking when symptoms occur
-• Resting adequately
-• Staying hydrated
+Tracking symptom details can be helpful:
+• When symptoms occur
+• What makes them better or worse
+• Any associated factors
 
-Please consult Suwa Setha Hospital for proper medical evaluation."""
+Suwa Setha Hospital healthcare providers can offer professional assessment and advice for your specific situation."""
         ]
         response = random.choice(responses)
     
@@ -235,7 +230,12 @@ Please consult Suwa Setha Hospital for proper medical evaluation."""
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 8000))
-    print(f"🚀 Suwa Setha Hospital AI Chatbot")
+    port = int(os.environ.get("PORT", 8000))
+    
+    print("=" * 60)
+    print("🏥 Suwa Setha Hospital AI Symptom Checker")
     print(f"🔗 Port: {port}")
+    print(f"🤖 Model loaded: {medical_ai.model_loaded}")
+    print("=" * 60)
+    
     uvicorn.run(app, host="0.0.0.0", port=port)
