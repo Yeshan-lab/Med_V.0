@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Backend URL - Change this to your Render backend URL when deployed
     // For local development: "http://localhost:8000"
     // For production: "https://your-backend-app.onrender.com"
-    const BACKEND_URL = "http://localhost:8000";
+    const BACKEND_URL = "https://suwa-setha-backend.onrender.com";
     
     // Example symptoms for quick testing
     const exampleSymptoms = [
