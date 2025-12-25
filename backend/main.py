@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import random
 import time
+import os  # ⬅️ ADD THIS IMPORT
 from model_loader import medical_ai, test_model
 
 app = FastAPI(
