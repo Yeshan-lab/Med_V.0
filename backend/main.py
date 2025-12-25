@@ -161,7 +161,6 @@ if __name__ == "__main__":
     print("=" * 60)
     print("🏥 SUWA SETHA HOSPITAL - ADVANCED MEDICAL AI")
     print("=" * 60)
-    print(f"🔗 Port: {port}")
     print(f"📊 Conditions: 15+ medical conditions")
     print(f"⚡ Response: Instant (no model downloads)")
     print(f"🎯 AI Type: Rule-Based Knowledge System")
