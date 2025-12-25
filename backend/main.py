@@ -22,7 +22,7 @@ app.add_middleware(
 
 # Configuration
 HUGGINGFACE_API_KEY = "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"
-MODEL_NAME = "distilgpt2e"
+MODEL_NAME = "microsoft/DialoGPT-small"
 # Use the new router endpoint
 API_URL = "https://router.huggingface.co"
 
