@@ -61,8 +61,8 @@ class AdvancedMedicalAI:
             response += f"• {emergency.title()}\n"
         
         response += "\n**Suwa Setha Hospital Emergency Department**\n"
-        response += "📍 Location: SuwaSetha Hospital Colombo"
-        response += "📞 Emergency: 1990 or 0112 691 111"
+        response += "📍 Location: SuwaSetha Hospital Colombo\n"
+        response += "📞 Emergency: 1990 or 0112 691 111\n"
         response += "⏰ 24/7 Emergency Services Available\n\n"
         
         response += "⚠️ THIS IS NOT A SUBSTITUTE FOR EMERGENCY MEDICAL CARE."
